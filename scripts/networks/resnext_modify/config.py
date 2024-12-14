@@ -1,0 +1,1 @@
+resnext_101_32_path = '/data2/yoshimura/mirror_detection/project_VMD/checkpoints/resnext_101_32x4d.pth'
