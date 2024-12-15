@@ -25,11 +25,11 @@ import numpy as np
 import time
 import argparse
 import importlib
-from utils import backup_code
+# from utils import backup_code
 
 
 # 実験設定
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 cudnn.deterministic = True
 cudnn.benchmark = False
 
@@ -105,10 +105,10 @@ to_pil = transforms.ToPILImage()
 print('=====>Dataset loading<======')
 training_root = [VMD_training_root] # training_root should be a list form, like [datasetA, datasetB, datasetC], here we use only one dataset.
 train_set = CrossPairwiseImg(training_root, joint_transform, img_transform, target_transform)
-train_loader = DataLoader(train_set, batch_size=batch_size,  drop_last=True, num_workers=8, shuffle=True)
+train_loader = DataLoader(train_set, batch_size=batch_size,  drop_last=True, num_workers=0, shuffle=True)
 valid_root = [VMD_valid_root]
 val_set = CrossPairwiseImg(valid_root, val_joint_transform, img_transform, target_transform)
-val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=8, shuffle=False)
+val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=0, shuffle=False)
 
 print("max epoch:{}".format(args['max_epoch']))
 
@@ -162,10 +162,10 @@ def main():
                              (math.cos((epoch-args['warm_up_epochs'])/(args['max_epoch']-args['warm_up_epochs'])*math.pi)+1)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warm_up_with_cosine_lr)
     # scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  # change learning rate after 20000 iters
-
+    # pdb.set_trace()
     check_mkdir(ckpt_path)
     check_mkdir(os.path.join(ckpt_path, exp_name))
-    backup_code(".", os.path.join(ckpt_path, exp_name, "backup_code"))
+    # backup_code(".", os.path.join(ckpt_path, exp_name, "backup_code"))
     open(log_path, 'w').write(str(args) + '\n\n')
     train(net, optimizer, scheduler)
 

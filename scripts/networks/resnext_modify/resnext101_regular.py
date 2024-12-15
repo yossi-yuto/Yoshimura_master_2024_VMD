@@ -12,9 +12,9 @@ class ResNeXt101(nn.Module):
         net = resnext_101_32x4d
         if pretained:
             try:
-                net.load_state_dict(torch.load(resnext_101_32_path))
+                net.load_state_dict(torch.load(resnext_101_32_path, weights_only=True))
             except FileNotFoundError:
-                net.load_state_dict(torch.load('../' + resnext_101_32_path))
+                net.load_state_dict(torch.load('../' + resnext_101_32_path, weights_only=True))
         net = list(net.children())
         self.layer0 = nn.Sequential(*net[:3])
         self.layer1 = nn.Sequential(*net[3: 5])
