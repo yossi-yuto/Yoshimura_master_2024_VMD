@@ -43,7 +43,7 @@ class CrossPairwiseImg(data.Dataset):
         query_path, query_gt_path, videoStartIndex2, videoLength2 = self.videoImg_list[query_index]
         if videoStartIndex != videoStartIndex2 or videoLength != videoLength2:
             raise TypeError('Something wrong')
-        # pdb.set_trace()
+        pdb.set_trace()
         other_path, other_gt_path, videoStartIndex3, videoLength3 = self.videoImg_list[other_index]
         if videoStartIndex != videoStartIndex3:
             raise TypeError('Something wrong')

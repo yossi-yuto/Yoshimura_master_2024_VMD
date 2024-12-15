@@ -186,15 +186,11 @@ def train(net, optimizer, scheduler):
         for i, sample in enumerate(train_iterator):
 
             exemplar, exemplar_gt, query, query_gt = sample['exemplar'].cuda(), sample['exemplar_gt'].cuda(), sample['query'].cuda(), sample['query_gt'].cuda()
-            other, other_gt = sample['other'].cuda(), sample['other_gt'].cuda()
+            other, other_gt = sample['other'].cuda(), sample['other_gt'].cuda()   # exemplar: t, query: t+1, other: ramdom frame
 
             optimizer.zero_grad()
 
             exemplar_pre, query_pre, other_pre, examplar_final, query_final, other_final = net(exemplar, query, other)
-
-            # bce_loss1 = binary_xloss(exemplar_pre, exemplar_gt)
-            # bce_loss2 = binary_xloss(query_pre, query_gt)
-            # bce_loss3 = binary_xloss(other_pre, other_gt)
 
             loss_hinge1 = lovasz_hinge(exemplar_pre, exemplar_gt)
             loss_hinge2 = lovasz_hinge(query_pre, query_gt)
@@ -205,13 +201,6 @@ def train(net, optimizer, scheduler):
             loss_hinge_other = lovasz_hinge(other_final, other_gt)
             
             loss_seg = loss_hinge1 + loss_hinge2 + loss_hinge3 + loss_hinge_examplar + loss_hinge_query + loss_hinge_other
-            
-            # loss_seg = bce_loss1 + bce_loss2 + bce_loss3 + loss_hinge1 + loss_hinge2 + loss_hinge3
-            # classification loss
-            
-            # scene_labels = torch.zeros(scene_logits.shape[0], dtype=torch.long).cuda()
-            # cla_loss = ce_loss(scene_logits, scene_labels) * 10
-            # loss = loss_seg + cla_loss
             loss = loss_seg
 
             loss.backward()
