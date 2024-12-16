@@ -66,21 +66,10 @@ class VMD_Network(nn.Module):
 
     def forward(self, input1, input2, input3):
         input_size = input1.size()[2:]
-        # low_exemplar, exemplar, _ = self.encoder(input1)
-        # low_query, query, _ = self.encoder(input2)
-        # low_other, other, _ = self.encoder(input3)
-
+        
         low_exemplar, exemplar = self.encoder(input1)
         low_query, query = self.encoder(input2)
         low_other, other = self.encoder(input3)
-
-        # print("low_exemplar.shape: ", low_exemplar.shape)
-        # print("low_query.shape: ", low_query.shape)
-        # low_exemplar.shape:  torch.Size([2, 256, 104, 104])
-        # low_query.shape:  torch.Size([2, 256, 104, 104])
-        # exemplar.shape:  torch.Size([2, 256, 26, 26])
-        # query.shape:  torch.Size([2, 256, 26, 26])
-        # input()
 
         #ehnance low level feature
         low_exemplar, low_query = self.ra_attention_low(low_exemplar, low_query)
@@ -96,11 +85,9 @@ class VMD_Network(nn.Module):
         query_pre = self.final_pre(fuse_query)
         other_pre = self.final_pre(fuse_other)
 
-        exemplar_pre = F.upsample(exemplar_pre, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
-        query_pre = F.upsample(query_pre, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
-        other_pre = F.upsample(other_pre, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
-
-
+        exemplar_pre = F.interpolate(exemplar_pre, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
+        query_pre = F.interpolate(query_pre, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
+        other_pre = F.interpolate(other_pre, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
 
         examplar_pre_small = F.interpolate(exemplar_pre, size=exemplar.shape[2:], mode='bilinear', align_corners=False)
         query_pre_small = F.interpolate(query_pre, size=query.shape[2:], mode='bilinear', align_corners=False)
@@ -125,40 +112,14 @@ class VMD_Network(nn.Module):
         # enhanced_other = other
         enhanced_other, _ = self.ra_attention_other(sigmoid_other * other, outside_examplar_feat.transpose(-2, -1))
 
-        # no flip
-        # enhanced_examplar, _ = self.ra_attention_examplar(sigmoid_examplar * exemplar, outside_query_feat)
-        # enhanced_query, _ = self.ra_attention_query(sigmoid_query * query, outside_examplar_feat)
-        # enhanced_other, _ = self.ra_attention_other(sigmoid_other * other, outside_examplar_feat)
-        
-
-
         final_examplar = self.final_examplar(enhanced_examplar)
         final_query = self.final_query(enhanced_query)
         final_other = self.final_other(enhanced_other)
 
-        final_examplar = F.upsample(final_examplar, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
-        final_query = F.upsample(final_query, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
-        final_other = F.upsample(final_other, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
-
-
-        # scene vector
-        # v1 = F.adaptive_avg_pool2d(exemplar * sigmoid_examplar, (1, 1)).squeeze(-1).squeeze(-1)
-        # v1 = nn.functional.normalize(v1, dim=1)
-        # v2 = F.adaptive_avg_pool2d(query * sigmoid_query, (1, 1)).squeeze(-1).squeeze(-1)
-        # v2 = nn.functional.normalize(v2, dim=1)
-        # v3 = F.adaptive_avg_pool2d(other * sigmoid_other, (1, 1)).squeeze(-1).squeeze(-1)
-        # v3 = nn.functional.normalize(v3, dim=1)
-
-        # l_pos = torch.einsum('nc,nc->n', [v1, v2]).unsqueeze(-1)
-        # l_neg1 = torch.einsum('nc,nc->n', [v1, v3]).unsqueeze(-1)
-        # # # l_neg2 = torch.einsum('nc,nc->n', [v2, v3]).unsqueeze(-1)
-        # # # logits = torch.cat([l_pos, l_neg1, l_neg2], dim=1)
-        # logits = torch.cat([l_pos, l_neg1], dim=1)
-        # logits /= self.T
-        # dummy_logits = 0
-        # logits = dummy_logits
-
-
+        final_examplar = F.interpolate(final_examplar, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
+        final_query = F.interpolate(final_query, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
+        final_other = F.interpolate(final_other, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
+        
         if self.training:
             return exemplar_pre, query_pre, other_pre, final_examplar, final_query, final_other
         else:
