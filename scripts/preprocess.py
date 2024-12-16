@@ -19,20 +19,6 @@ import torch.multiprocessing as mp
 
 
 
-def cotracker_worker(cotracker, frames, grid_size, queue, num_processes :int):
-    """
-    マルチプロセス用のCoTracker処理。
-    """
-    print("CoTracker worker", num_processes, "started.")
-    B, T, C, H, W = frames.shape
-    pred_tracks, vis_tracks = cotracker(frames, grid_size=grid_size)
-    pred_tracks[..., 0] = pred_tracks[..., 0] / (W - 1) * 2 - 1
-    pred_tracks[..., 1] = pred_tracks[..., 1] / (H - 1) * 2 - 1
-    pred_tracks = pred_tracks.reshape(1, T, grid_size, grid_size, 2)
-    vis_tracks = vis_tracks.reshape(1, T, grid_size, grid_size, 1)
-    queue.put((pred_tracks, vis_tracks))
-    print("finished.")
-
 
 class PreProcessing():
     def __init__(self, grid_size: int):
@@ -63,34 +49,18 @@ class PreProcessing():
         B, T, C, H, W = frames.shape
         frames = frames.to(self.device)
         
-        # 並列化用のキュー
-        manager = mp.Manager()
-        queue = manager.Queue()
-        
-        # プロセス分割
-        num_processes = min(mp.cpu_count(), B)  # プロセス数をバッチサイズまたはCPUコア数に制限
-        batch_split = torch.chunk(frames, num_processes, dim=0)
-        processes = []
-        
         # batch ごとの処理を並列化
-        for i, batch in enumerate(batch_split):
-            p = Process(target=cotracker_worker, args=(self.cotracker, batch, self.grid_size, queue, i))
-            processes.append(p)
-            p.start()
-        
-        # 結果を収集
         pred_tracks_list = []
         vis_tracks_list = []
-        for _ in processes:
-            pred_tracks, vis_tracks = queue.get()
+        for batch in torch.chunk(frames, 5, dim=0):
+            pred_tracks, vis_tracks = self.cotracker(batch, grid_size=self.grid_size)
+            pred_tracks[..., 0] = pred_tracks[..., 0] / (W - 1) * 2 - 1
+            pred_tracks[..., 1] = pred_tracks[..., 1] / (H - 1) * 2 - 1
+            pred_tracks = pred_tracks.reshape(1, T, self.grid_size, self.grid_size, 2)
+            vis_tracks = vis_tracks.reshape(1, T, self.grid_size, self.grid_size, 1)
             pred_tracks_list.append(pred_tracks)
             vis_tracks_list.append(vis_tracks)
-        
-        # プロセス終了
-        for p in processes:
-            p.join()
-        
-        # 結果を結合
+            
         pred_tracks = torch.cat(pred_tracks_list, dim=0)
         vis_tracks = torch.cat(vis_tracks_list, dim=0)
         

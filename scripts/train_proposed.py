@@ -110,7 +110,6 @@ val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=0, shuffle=F
 
 print("max epoch:{}".format(args['max_epoch']))
 
-ce_loss = nn.CrossEntropyLoss()
 
 log_path = os.path.join(ckpt_path, exp_name, str(datetime.datetime.now()) + '.txt')
 val_log_path = os.path.join(ckpt_path, exp_name, 'val_log' + str(datetime.datetime.now()) + '.txt')
@@ -263,11 +262,12 @@ def val(net, epoch):
             # exemplar_gt, query_gt, other_gt = sample['exemplar_gt'].cuda(), sample['query_gt'].cuda(), sample['other_gt'].cuda()
             exemplar_gt = sample['exemplar_gt'].cuda()
 
+            # sigmoidが適用されているので、-1~1に正規化されている
             examplar_final, query_final, other_final = net(exemplar, query, other)
 
             
             res = (examplar_final.data > 0).to(torch.float32).squeeze(0)
-                        # res = torch.sigmoid(exemplar_pre.squeeze())
+            # res = torch.sigmoid(exemplar_pre.squeeze())
             mae = torch.mean(torch.abs(res - exemplar_gt.squeeze(0)))
 
             batch_size = exemplar.size(0)
