@@ -1,1 +1,4 @@
-resnext_101_32_path = '/data2/yoshimura/mirror_detection/project_VMD/checkpoints/resnext_101_32x4d.pth'
+import os
+
+# resnext_101_32_path = '../checkpoints/resnext_101_32x4d.pth'
+resnext_101_32_path = os.path.dirname(os.getcwd()) + '/checkpoints/resnext_101_32x4d.pth'
