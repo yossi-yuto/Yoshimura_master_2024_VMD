@@ -89,7 +89,7 @@ else:
     batch_size = train_batch_size
     
 # 前処理用
-preprocess = PreProcessing()
+preprocess = PreProcessing(grid_size=52)
 
 joint_transform = joint_transforms.Compose([
     joint_transforms.RandomHorizontallyFlip(),
@@ -189,10 +189,12 @@ def train(net, optimizer, scheduler):
 
             exemplar, exemplar_gt, query, query_gt = sample['exemplar'].cuda(), sample['exemplar_gt'].cuda(), sample['query'].cuda(), sample['query_gt'].cuda()
             other, other_gt = sample['other'].cuda(), sample['other_gt'].cuda()   # exemplar: t, query: t+1, other: ramdom frame
-
+            
+            output = preprocess.feature_pyramid_extract(sample['frames'].cuda())
+            
             optimizer.zero_grad()
 
-            exemplar_pre, query_pre, other_pre, examplar_final, query_final, other_final = net(exemplar, query, other)
+            exemplar_pre, query_pre, other_pre, examplar_final, query_final, other_final, opflow_based_pred = net(exemplar, query, other, output['exempler_featmap'], output['query_featmap'], output['opflow_angle'], output['opflow_magnitude'])
 
             loss_hinge1 = lovasz_hinge(exemplar_pre, exemplar_gt)
             loss_hinge2 = lovasz_hinge(query_pre, query_gt)
@@ -202,7 +204,9 @@ def train(net, optimizer, scheduler):
             loss_hinge_query = lovasz_hinge(query_final, query_gt)
             loss_hinge_other = lovasz_hinge(other_final, other_gt)
             
-            loss_seg = loss_hinge1 + loss_hinge2 + loss_hinge3 + loss_hinge_examplar + loss_hinge_query + loss_hinge_other
+            loss_hinge_opflow = lovasz_hinge(opflow_based_pred, exemplar_gt)
+            
+            loss_seg = loss_hinge1 + loss_hinge2 + loss_hinge3 + loss_hinge_examplar + loss_hinge_query + loss_hinge_other + loss_hinge_opflow
             loss = loss_seg
 
             loss.backward()
@@ -216,11 +220,11 @@ def train(net, optimizer, scheduler):
             loss_record4.update(loss_hinge1.item(), batch_size)
             loss_record5.update(loss_hinge2.item(), batch_size)
             loss_record6.update(loss_hinge3.item(), batch_size)
-            # loss_record7.update(cla_loss.item(), batch_size)
+            loss_record7.update(loss_hinge_opflow.item(), batch_size)
 
             curr_iter += 1
 
-            log = "epochs:%d, iter: %d, hinge1_f: %f5, hinge2_f: %f5, hinge3_f: %f5, hinge1: %f5, hinge2: %f5, hinge3: %f5, cla: %f5, lr: %f8"%\
+            log = "epochs:%d, iter: %d, hinge1_f: %f5, hinge2_f: %f5, hinge3_f: %f5, hinge1: %f5, hinge2: %f5, hinge3: %f5, hinge opflow: %f5, lr: %f8"%\
                   (curr_epoch, curr_iter, loss_record1.avg, loss_record2.avg, loss_record3.avg, loss_record4.avg, loss_record5.avg,
                    loss_record6.avg, loss_record7.avg, scheduler.get_lr()[0])
 
@@ -264,11 +268,12 @@ def val(net, epoch):
         val_iterator = tqdm(val_loader)
         for i, sample in enumerate(val_iterator):
             exemplar, query, other = sample['exemplar'].cuda(), sample['query'].cuda(), sample['other'].cuda()
-            # exemplar_gt, query_gt, other_gt = sample['exemplar_gt'].cuda(), sample['query_gt'].cuda(), sample['other_gt'].cuda()
             exemplar_gt = sample['exemplar_gt'].cuda()
+            
+            output = preprocess.feature_pyramid_extract(sample['frames'].cuda())
 
             # sigmoidが適用されているので、-1~1に正規化されている
-            examplar_final, query_final, other_final = net(exemplar, query, other)
+            examplar_final, query_final, other_final = net(exemplar, query, other, output['exempler_featmap'], output['query_featmap'], output['opflow_angle'], output['opflow_magnitude'])
 
             
             res = (examplar_final.data > 0).to(torch.float32).squeeze(0)

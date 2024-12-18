@@ -52,7 +52,7 @@ class PreProcessing():
         # batch ごとの処理を並列化
         pred_tracks_list = []
         vis_tracks_list = []
-        for batch in torch.chunk(frames, 5, dim=0):
+        for batch in torch.chunk(frames, B, dim=0):
             pred_tracks, vis_tracks = self.cotracker(batch, grid_size=self.grid_size)
             pred_tracks[..., 0] = pred_tracks[..., 0] / (W - 1) * 2 - 1
             pred_tracks[..., 1] = pred_tracks[..., 1] / (H - 1) * 2 - 1
@@ -83,6 +83,13 @@ class PreProcessing():
         supp_featmaps = self.extract_featmaps(frames[:, 1, :, :, :])
         
         pred_tracks, vis_tracks = self.tracking(frames)
+        # 角度計算
+        delta_x = pred_tracks[:, 1, :, :, 0] - pred_tracks[:, 0, :, :, 0]
+        delta_y = pred_tracks[:, 1, :, :, 1] - pred_tracks[:, 0, :, :, 1]
+        opflow_angle = torch.atan2(delta_y, delta_x)
+        opflow_angle = torch.sin(opflow_angle) # 正規化
+        opflow_magnitude = torch.sqrt(delta_x**2 + delta_y**2)
+        opflow_magnitude = (opflow_magnitude - opflow_magnitude.mean()) / opflow_magnitude.std() #　正規化
         
         tgt_output = []
         supp_output = []
@@ -94,4 +101,11 @@ class PreProcessing():
         tgt_output = torch.cat(tgt_output, dim=1)
         supp_output = torch.cat(supp_output, dim=1)
         
-        return tgt_output, supp_output
+        output = {
+            'exempler_featmap': tgt_output,
+            'query_featmap': supp_output,
+            'opflow_angle': opflow_angle,
+            'opflow_magnitude': opflow_magnitude,
+        }
+        
+        return output

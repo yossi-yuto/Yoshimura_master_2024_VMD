@@ -3,3 +3,6 @@
 code/
 __pycache__/
 */__pycache__/
+config.py
+*.txt
+config.py

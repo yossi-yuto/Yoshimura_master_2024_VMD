@@ -85,10 +85,12 @@ class VMD_Network(nn.Module):
         query_pre = self.final_pre(fuse_query)
         other_pre = self.final_pre(fuse_other)
 
+        # intermidiate prediction
         exemplar_pre = F.interpolate(exemplar_pre, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
         query_pre = F.interpolate(query_pre, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
         other_pre = F.interpolate(other_pre, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
 
+        # enhance high level feature
         examplar_pre_small = F.interpolate(exemplar_pre, size=exemplar.shape[2:], mode='bilinear', align_corners=False)
         query_pre_small = F.interpolate(query_pre, size=query.shape[2:], mode='bilinear', align_corners=False)
         other_pre_small = F.interpolate(other_pre, size=other.shape[2:], mode='bilinear', align_corners=False)
@@ -98,18 +100,17 @@ class VMD_Network(nn.Module):
         sigmoid_query = torch.sigmoid(query_pre_small)
         sigmoid_other = torch.sigmoid(other_pre_small)
 
+        # 鏡面領域外 (outside) の予測画像を計算
         outside_examplar = torch.ones(sigmoid_examplar.size()).cuda() - sigmoid_examplar
         outside_query =  torch.ones(sigmoid_query.size()).cuda() - sigmoid_query
-        # outside_other = torch.ones(sigmoid_other.size()).cuda() - sigmoid_other
+        outside_other = torch.ones(sigmoid_other.size()).cuda() - sigmoid_other
 
         outside_query_feat = outside_query * query
         outside_examplar_feat = outside_examplar * exemplar
-        # outside_other_feat = outside_other * other
+        outside_other_feat = outside_other * other
 
         enhanced_examplar, _ = self.ra_attention_examplar(sigmoid_examplar * exemplar, outside_query_feat.transpose(-2, -1))
         enhanced_query, _ = self.ra_attention_query(sigmoid_query * query, outside_examplar_feat.transpose(-2, -1))
-        
-        # enhanced_other = other
         enhanced_other, _ = self.ra_attention_other(sigmoid_other * other, outside_examplar_feat.transpose(-2, -1))
 
         final_examplar = self.final_examplar(enhanced_examplar)

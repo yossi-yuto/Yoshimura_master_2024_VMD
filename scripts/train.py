@@ -185,7 +185,7 @@ def train(net, optimizer, scheduler):
 
             exemplar, exemplar_gt, query, query_gt = sample['exemplar'].cuda(), sample['exemplar_gt'].cuda(), sample['query'].cuda(), sample['query_gt'].cuda()
             other, other_gt = sample['other'].cuda(), sample['other_gt'].cuda()   # exemplar: t, query: t+1, other: ramdom frame
-
+            
             optimizer.zero_grad()
 
             exemplar_pre, query_pre, other_pre, examplar_final, query_final, other_final = net(exemplar, query, other)
@@ -200,7 +200,7 @@ def train(net, optimizer, scheduler):
             
             loss_seg = loss_hinge1 + loss_hinge2 + loss_hinge3 + loss_hinge_examplar + loss_hinge_query + loss_hinge_other
             loss = loss_seg
-
+            pdb.set_trace()
             loss.backward()
 
             torch.nn.utils.clip_grad_norm_(net.parameters(), 12)  # gradient clip
