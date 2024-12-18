@@ -25,6 +25,7 @@ import numpy as np
 import time
 import argparse
 import importlib
+from preprocess import PreProcessing
 
 
 # 実験設定
@@ -35,9 +36,9 @@ ckpt_path = './experiment_results'
 # exp_name = 'VMD'
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--exp', type=str, default='VMD_network', help='exp name')
-parser.add_argument('--model', type=str, default='VMD_network', help='model name')
-parser.add_argument('--gpu', type=str, default='4,5', help='used gpu id')
+parser.add_argument('--exp', type=str, default='proposed_network', help='exp name')
+parser.add_argument('--model', type=str, default='proposed_network', help='model name')
+parser.add_argument('--gpu', type=str, default='1', help='used gpu id')
 parser.add_argument('--batchsize', type=int, default=10, help='train batch')
 parser.add_argument('--bestonly', action="store_true", help='only best model')
 
@@ -47,6 +48,7 @@ model_name = cmd_args.model
 gpu_ids = cmd_args.gpu
 train_batch_size = cmd_args.batchsize
 
+# model_nameをファイル名にしておく、ネットワーク名はVMD_Networkに統一により、異なるモデルの実験でも可能
 VMD_file = importlib.import_module('networks.' + model_name)
 VMD_Network = VMD_file.VMD_Network
 
@@ -85,6 +87,9 @@ if len(gpu_ids.split(',')) > 1:
 else:
     torch.cuda.set_device(0)
     batch_size = train_batch_size
+    
+# 前処理用
+preprocess = PreProcessing()
 
 joint_transform = joint_transforms.Compose([
     joint_transforms.RandomHorizontallyFlip(),
