@@ -31,10 +31,23 @@ class CrossPairwiseImg(data.Dataset):
     def __getitem__(self, index):
         manual_random = random.random()
         exemplar_path, exemplar_gt_path, videoStartIndex, videoLength = self.videoImg_list[index]
-        query_index = np.random.randint(videoStartIndex, videoStartIndex + videoLength)
+        # query_index = np.random.randint(videoStartIndex, videoStartIndex + videoLength) # other indexの確保
+        frame_index_list = np.arange(videoStartIndex, videoStartIndex + videoLength) 
+        relative_dis_index = frame_index_list - index
+        
+        if -5 in relative_dis_index:
+            query_index = index - 5
+        elif 5 in relative_dis_index:
+            query_index = index + 5
+        else:
+            max_relative_index = max(relative_dis_index, key=abs)
+            query_index = index + max_relative_index
+            
+        # pdb.set_trace()
+        
         if query_index == index:
             query_index = np.random.randint(videoStartIndex, videoStartIndex + videoLength)
-
+            
         other_index = index + 1
         if other_index >= videoStartIndex + videoLength - 1:
             other_index = videoStartIndex
@@ -48,9 +61,9 @@ class CrossPairwiseImg(data.Dataset):
         if videoStartIndex != videoStartIndex3:
             raise TypeError('Something wrong')
         # exemplar: t, query: t+1, other: random sample
-        if len(self.img_root) > 0:
-            single_idx = np.random.randint(0, videoLength)
-            single_image_path, single_gt_path = self.singleImg_list[single_idx]
+        # if len(self.img_root) > 0:
+        #     single_idx = np.random.randint(0, videoLength)
+        #     single_image_path, single_gt_path = self.singleImg_list[single_idx]
 
         exemplar = Image.open(exemplar_path).convert('RGB')
         query = Image.open(query_path).convert('RGB')
@@ -58,10 +71,11 @@ class CrossPairwiseImg(data.Dataset):
         exemplar_gt = Image.open(exemplar_gt_path).convert('L')
         query_gt = Image.open(query_gt_path).convert('L')
         other_gt = Image.open(other_gt_path).convert('L')
-        if len(self.img_root) > 0:
-            single_image = Image.open(single_image_path).convert('RGB')
-            single_gt = Image.open(single_gt_path).convert('L')
+        # if len(self.img_root) > 0:
+        #     single_image = Image.open(single_image_path).convert('RGB')
+        #     single_gt = Image.open(single_gt_path).convert('L')
 
+        # データ拡張
         if self.joint_transform is not None:
             exemplar, exemplar_gt = self.joint_transform(exemplar, exemplar_gt, manual_random)
             query, query_gt = self.joint_transform(query, query_gt, manual_random)
@@ -72,13 +86,14 @@ class CrossPairwiseImg(data.Dataset):
             exemplar_frame = self.target_transform(exemplar) * 255.0
             query_frame = self.target_transform(query) * 255.0
             frames = torch.stack([exemplar_frame, query_frame], dim=0) # (2, C, H, W)
-            
+        #　通常の変換
         if self.img_transform is not None:
             exemplar = self.img_transform(exemplar)
             query = self.img_transform(query)
             other = self.img_transform(other)
             if len(self.img_root) > 0:
                 single_image = self.img_transform(single_image)
+        # マスク画像の変換
         if self.target_transform is not None:
             exemplar_gt = self.target_transform(exemplar_gt)
             query_gt = self.target_transform(query_gt)
@@ -144,6 +159,7 @@ class CrossPairwiseImg(data.Dataset):
 
     def __len__(self):
         return len(self.videoImg_list) // 2 * 2
+    
 
 if __name__ == '__main__':
     root = [
