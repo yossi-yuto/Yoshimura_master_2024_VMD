@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 import joint_transforms
 from config import VMD_training_root, VMD_valid_root
-from dataset.VShadow_crosspairwise import CrossPairwiseImg
+from dataset.VShadow_crosspairwise_proposed import CrossPairwiseImg
 from misc import AvgMeter, check_mkdir
 # from networks.TVSD import TVSD
 # from networks.VMD_network import VMD_Network
@@ -40,6 +40,7 @@ parser.add_argument('--exp', type=str, default='proposed_network', help='exp nam
 parser.add_argument('--model', type=str, default='proposed_network', help='model name')
 parser.add_argument('--gpu', type=str, default='1', help='used gpu id')
 parser.add_argument('--batchsize', type=int, default=10, help='train batch')
+parser.add_argument('--fold', type=int, default=0, help='fold number')
 parser.add_argument('--bestonly', action="store_true", help='only best model')
 
 cmd_args = parser.parse_args()
@@ -47,6 +48,7 @@ exp_name = cmd_args.exp
 model_name = cmd_args.model
 gpu_ids = cmd_args.gpu
 train_batch_size = cmd_args.batchsize
+fold_num = cmd_args.fold
 
 # model_nameをファイル名にしておく、ネットワーク名はVMD_Networkに統一により、異なるモデルの実験でも可能
 VMD_file = importlib.import_module('networks.' + model_name)
@@ -89,7 +91,7 @@ else:
     batch_size = train_batch_size
     
 # 前処理用
-preprocess = PreProcessing(grid_size=52)
+preprocess = PreProcessing(grid_size=52, relative_flow=True)
 
 joint_transform = joint_transforms.Compose([
     joint_transforms.RandomHorizontallyFlip(),
@@ -106,10 +108,14 @@ target_transform = transforms.ToTensor()
 to_pil = transforms.ToPILImage()
 
 print('=====>Dataset loading<======')
-training_root = [VMD_training_root] # training_root should be a list form, like [datasetA, datasetB, datasetC], here we use only one dataset.
+VMD_training_root_list = list(VMD_training_root)
+VMD_training_root_list[0] = VMD_training_root_list[0] + '_fold_' + str(fold_num)
+VMD_valid_root_list = list(VMD_valid_root)
+VMD_valid_root_list[0] = VMD_valid_root_list[0] + '_fold_' + str(fold_num)
+training_root = [VMD_training_root_list]
 train_set = CrossPairwiseImg(training_root, joint_transform, img_transform, target_transform)
 train_loader = DataLoader(train_set, batch_size=batch_size,  drop_last=True, num_workers=0, shuffle=True)
-valid_root = [VMD_valid_root]
+valid_root = [VMD_valid_root_list]
 val_set = CrossPairwiseImg(valid_root, val_joint_transform, img_transform, target_transform)
 val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=0, shuffle=False)
 
@@ -158,6 +164,11 @@ def main():
             # {"params": net.final_pre.parameters(), "lr": args['scratch_lr']}
         ]
 
+    # parameters読み込み
+    params_filepath = "/data2/yoshimura/mirror_detection/proj_mirror_video/scripts/experiment_results/20250120_vmdnet_fold_" + str(fold_num) + "/best_mae.pth"
+    net.load_state_dict(torch.load(params_filepath)['model'], strict=False)
+    print("load parameters from {}".format(params_filepath))
+
     # optimizer = optim.SGD(params, momentum=args['momentum'], weight_decay=args['weight_decay'])
     optimizer = optim.Adam(params, betas=(0.9, 0.99), eps=6e-8, weight_decay=args['weight_decay'])
     warm_up_with_cosine_lr = lambda epoch: epoch / args['warm_up_epochs'] if epoch <= args['warm_up_epochs'] else 0.5 * \
@@ -185,8 +196,8 @@ def train(net, optimizer, scheduler):
         train_iterator = tqdm(train_loader, total=len(train_loader))
         # train_iterator = tqdm(train_loader, desc=f'Epoch: {curr_epoch}', ncols=100, ascii=' =', bar_format='{l_bar}{bar}|')
         # tqdm(train_loader, total=len(train_loader))
+        start_time = time.time()
         for i, sample in enumerate(train_iterator):
-
             exemplar, exemplar_gt, query, query_gt = sample['exemplar'].cuda(), sample['exemplar_gt'].cuda(), sample['query'].cuda(), sample['query_gt'].cuda()
             other, other_gt = sample['other'].cuda(), sample['other_gt'].cuda()   # exemplar: t, query: t+1, other: ramdom frame
             
@@ -242,9 +253,10 @@ def train(net, optimizer, scheduler):
                 'optimizer': optimizer.state_dict(),
             }
             torch.save(checkpoint, os.path.join(ckpt_path, exp_name, f'{curr_epoch}.pth'))
-
-
+            
         current_mae = val(net, curr_epoch)
+
+        print('1 epoch time: %f' % (time.time() - start_time))
 
         net.train() # val -> train
         if current_mae < best_mae:
@@ -273,7 +285,7 @@ def val(net, epoch):
             output = preprocess.feature_pyramid_extract(sample['frames'].cuda())
 
             # sigmoidが適用されているので、-1~1に正規化されている
-            examplar_final, query_final, other_final = net(exemplar, query, other, output['exempler_featmap'], output['query_featmap'], output['opflow_angle'], output['opflow_magnitude'])
+            examplar_final, query_final, other_final, opflow_based_pred = net(exemplar, query, other, output['exempler_featmap'], output['query_featmap'], output['opflow_angle'], output['opflow_magnitude'])
 
             
             res = (examplar_final.data > 0).to(torch.float32).squeeze(0)

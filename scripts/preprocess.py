@@ -21,9 +21,10 @@ import torch.multiprocessing as mp
 
 
 class PreProcessing():
-    def __init__(self, grid_size: int):
+    def __init__(self, grid_size: int, relative_flow: bool = False):
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.relative_flow = relative_flow
         
         # Feature extractor (ResNet50)
         resnet = resnet50(weights="IMAGENET1K_V1").to(self.device)
@@ -87,6 +88,9 @@ class PreProcessing():
         delta_x = pred_tracks[:, 1, :, :, 0] - pred_tracks[:, 0, :, :, 0]
         delta_y = pred_tracks[:, 1, :, :, 1] - pred_tracks[:, 0, :, :, 1]
         opflow_angle = torch.atan2(delta_y, delta_x)
+        if self.relative_flow:
+            opflow_angle = opflow_angle - torch.mean(opflow_angle, dim=(1,2),keepdim=True)
+            
         opflow_angle = torch.sin(opflow_angle) # 正規化
         opflow_magnitude = torch.sqrt(delta_x**2 + delta_y**2)
         opflow_magnitude = (opflow_magnitude - opflow_magnitude.mean()) / opflow_magnitude.std() #　正規化
