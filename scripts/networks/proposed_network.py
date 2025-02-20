@@ -1,3 +1,7 @@
+# デバック確認用
+import pdb
+import matplotlib.pyplot as plt
+
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
@@ -7,7 +11,7 @@ try:
 except ImportError:
     from DeepLabV3 import DeepLabV3
     
-from .layers import CrossAttention
+from .layers import CrossAttention_Mirror, OpticalAttentionModule
 
 
 class VMD_Network(nn.Module):
@@ -28,7 +32,8 @@ class VMD_Network(nn.Module):
         self.ra_attention_query = Relation_Attention(in_channels=256, out_channels=256)
         self.ra_attention_other = Relation_Attention(in_channels=256, out_channels=256)
         
-        self.cross_attention_module = CrossAttention(in_channels=3840+2, out_channels=3840//2, num_classes=num_classes)
+        # self.cross_attention_module = CrossAttention_Mirror(in_channels=3840, out_channels=3840//2, num_classes=num_classes)
+        self.cross_attention_module = OpticalAttentionModule(in_channels=3840, out_channels=3840//2, kernel_size=1)
         
         # reduce dimension
         self.project = nn.Sequential(
@@ -118,14 +123,13 @@ class VMD_Network(nn.Module):
         enhanced_other, _ = self.ra_attention_other(sigmoid_other * other, outside_examplar_feat.transpose(-2, -1))
 
         # proposed
-        exemplar_opflow = torch.cat([input1_featmap, opflow_angle[:,None], opflow_magnitude[:, None]], dim=1)
-        other_opflow = torch.cat([input3_featmap, opflow_angle[:,None], opflow_magnitude[:, None]], dim=1)
-        opflow_based_pred = self.cross_attention_module(exemplar_opflow, other_opflow)
+        opflow = torch.stack([opflow_angle, opflow_magnitude], dim=1)
+        opflow_based_pred = self.cross_attention_module(input3_featmap, input1_featmap, opflow)
         opflow_based_pred_small = F.interpolate(opflow_based_pred, size=exemplar.shape[2:], mode='bilinear', align_corners=False)
         opflow_based_pred = F.interpolate(opflow_based_pred, input_size, mode='bilinear', align_corners=False)  # upsample to the size of input image, scale=8
-        
+        # pdb.set_trace()
         # original
-        final_examplar = self.final_examplar(enhanced_examplar * opflow_based_pred_small)
+        final_examplar = self.final_examplar(enhanced_examplar + opflow_based_pred_small)
         final_query = self.final_query(enhanced_query)
         final_other = self.final_other(enhanced_other)
 
@@ -137,7 +141,7 @@ class VMD_Network(nn.Module):
             return exemplar_pre, query_pre, other_pre, final_examplar, final_query, final_other, opflow_based_pred
         else:
             # return exemplar_pre, query_pre, other_pre, logits
-            return final_examplar, final_query, final_other
+            return final_examplar, final_query, final_other, opflow_based_pred
 
 
 
