@@ -115,7 +115,7 @@ def main():
                     pred_1d = res_sigmoid.cpu().numpy().flatten()
                     gt_1d = mask_transform(exemplar_gt).numpy().flatten()
                     # calculate IoU
-                    pdb.set_trace()
+                    # pdb.set_trace()
                     IoU :dict  = calc_iou_multi_thresh(gt_1d, pred_1d, thresholds=[0.3, 0.5, 0.8])
                     metrics_dict['IoU03'].append(IoU[0.3])
                     metrics_dict['IoU05'].append(IoU[0.5])
@@ -130,17 +130,16 @@ def main():
                     metrics_dict['MaxFbeta0.5'].append(fbetas[0.5]['max_fscore'])
                     metrics_dict['MaxFbeta1.0'].append(fbetas[1.0]['max_fscore'])
                     
-                    print(" IoU05 : ", IoU, 
-                        "\nMAE : ", MAE, 
-                        "\nMaxmumFbeta0.3: ", fbetas[0.5]['max_fscore'],
-                        "\nMaxmumFbeta0.5: ", fbetas[0.5]['max_fscore'],
-                        "\nMaxmumFbeta1.0: ", fbetas[1.0]['max_fscore'])
+                    print(" IoU05 : ", round(IoU, 4), 
+                        "\nMAE : ", round(MAE, 4), 
+                        "\nMaxmumFbeta0.3: ", round(fbetas[0.3]['max_fscore'], 4),
+                        "\nMaxmumFbeta0.5: ", round(fbetas[0.5]['max_fscore'], 4),
+                        "\nMaxmumFbeta1.0: ", round(fbetas[1.0]['max_fscore'], 4))
+
                     
                     check_mkdir(os.path.join(args_.result_path, video))
                     save_name = f"{exemplar_name}.png"
                     print(os.path.join(args_.result_path, video, save_name))
-                    # Image.fromarray(prediction).save(os.path.join(args_.result_path, video, save_name))
-                    
 
                     """ optical flow based map visualization """
                     opflow_based_map = F.interpolate(torch.sigmoid(opflow_based_map), size=(h, w), mode='bilinear', align_corners=False)
@@ -181,6 +180,7 @@ def main():
                     maxFbeta_map = torch.zeros_like(resized_sigmoid)
                     maxFbeta_map[resized_sigmoid> thres] = 255
                     Image.fromarray((maxFbeta_map.squeeze().cpu().numpy()).astype(np.uint8)).save(os.path.join(args_.result_path, video, f"{exemplar_name}_maxFbeta_{score:.3F}.png"))
+                    continue
 
         with open(os.path.join(args_.result_path, 'metrics.txt'), 'a') as f:
             f.write("IoU03 : {}\n".format(np.mean(metrics_dict['IoU03'])))
