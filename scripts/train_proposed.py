@@ -109,9 +109,9 @@ to_pil = transforms.ToPILImage()
 
 print('=====>Dataset loading<======')
 VMD_training_root_list = list(VMD_training_root)
-VMD_training_root_list[0] = VMD_training_root_list[0] + '_fold_' + str(fold_num)
+VMD_training_root_list[0] = VMD_training_root_list[0] 
 VMD_valid_root_list = list(VMD_valid_root)
-VMD_valid_root_list[0] = VMD_valid_root_list[0] + '_fold_' + str(fold_num)
+VMD_valid_root_list[0] = VMD_valid_root_list[0] 
 training_root = [VMD_training_root_list]
 train_set = CrossPairwiseImg(training_root, joint_transform, img_transform, target_transform)
 train_loader = DataLoader(train_set, batch_size=batch_size,  drop_last=True, num_workers=0, shuffle=True)
@@ -164,21 +164,25 @@ def main():
             # {"params": net.final_pre.parameters(), "lr": args['scratch_lr']}
         ]
 
-    # parameters読み込み
-    params_filepath = "/data2/yoshimura/mirror_detection/proj_mirror_video/scripts/experiment_results/20250120_vmdnet_fold_" + str(fold_num) + "/best_mae.pth"
-    net.load_state_dict(torch.load(params_filepath)['model'], strict=False)
-    print("load parameters from {}".format(params_filepath))
+    # parameters loading
+    # pretrained_filepath = os.path.join('../checkpoints', 'best.pth')
+    #### 削除予定
+    pretrained_filepath = "/data2/yoshimura/mirror_detection/proj_mirror_video/scripts/experiment_results/20250215/best_mae.pth"
+    if not os.path.exists(pretrained_filepath):
+        raise ValueError('pretrained file is not found')
+    net.load_state_dict(torch.load(pretrained_filepath)['model'], strict=False)
+    # backbone prameters freeze
+    for name, param in net.named_parameters():
+        if 'backbone' in name:
+            param.requires_grad = False
 
-    # optimizer = optim.SGD(params, momentum=args['momentum'], weight_decay=args['weight_decay'])
+    # learning setting
     optimizer = optim.Adam(params, betas=(0.9, 0.99), eps=6e-8, weight_decay=args['weight_decay'])
     warm_up_with_cosine_lr = lambda epoch: epoch / args['warm_up_epochs'] if epoch <= args['warm_up_epochs'] else 0.5 * \
                              (math.cos((epoch-args['warm_up_epochs'])/(args['max_epoch']-args['warm_up_epochs'])*math.pi)+1)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=warm_up_with_cosine_lr)
-    # scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  # change learning rate after 20000 iters
-    # pdb.set_trace()
     check_mkdir(ckpt_path)
     check_mkdir(os.path.join(ckpt_path, exp_name))
-    # backup_code(".", os.path.join(ckpt_path, exp_name, "backup_code"))
     open(log_path, 'w').write(str(args) + '\n\n')
     train(net, optimizer, scheduler)
 
@@ -194,15 +198,14 @@ def train(net, optimizer, scheduler):
         loss_record1, loss_record2, loss_record3, loss_record4 = AvgMeter(), AvgMeter(), AvgMeter(), AvgMeter()
         loss_record5, loss_record6, loss_record7, loss_record8 = AvgMeter(), AvgMeter(), AvgMeter(), AvgMeter()
         train_iterator = tqdm(train_loader, total=len(train_loader))
-        # train_iterator = tqdm(train_loader, desc=f'Epoch: {curr_epoch}', ncols=100, ascii=' =', bar_format='{l_bar}{bar}|')
-        # tqdm(train_loader, total=len(train_loader))
+        
         start_time = time.time()
         for i, sample in enumerate(train_iterator):
             exemplar, exemplar_gt, query, query_gt = sample['exemplar'].cuda(), sample['exemplar_gt'].cuda(), sample['query'].cuda(), sample['query_gt'].cuda()
             other, other_gt = sample['other'].cuda(), sample['other_gt'].cuda()   # exemplar: t, query: t+1, other: ramdom frame
             
             output = preprocess.feature_pyramid_extract(sample['frames'].cuda())
-            
+
             optimizer.zero_grad()
 
             exemplar_pre, query_pre, other_pre, examplar_final, query_final, other_final, opflow_based_pred = net(exemplar, query, other, output['exempler_featmap'], output['query_featmap'], output['opflow_angle'], output['opflow_magnitude'])
@@ -284,18 +287,15 @@ def val(net, epoch):
             
             output = preprocess.feature_pyramid_extract(sample['frames'].cuda())
 
-            # sigmoidが適用されているので、-1~1に正規化されている
             examplar_final, query_final, other_final, opflow_based_pred = net(exemplar, query, other, output['exempler_featmap'], output['query_featmap'], output['opflow_angle'], output['opflow_magnitude'])
-
             
             res = (examplar_final.data > 0).to(torch.float32).squeeze(0)
-            # res = torch.sigmoid(exemplar_pre.squeeze())
+            
             mae = torch.mean(torch.abs(res - exemplar_gt.squeeze(0)))
 
             batch_size = exemplar.size(0)
             mae_record.update(mae.item(), batch_size)
-            # prediction = np.array(transforms.Resize((h, w))(to_pil(res.cpu())))
-
+            
         log = "val: iter: %d, mae: %f5" % (epoch, mae_record.avg)
         print(log)
         open(val_log_path, 'a').write(log + '\n')
