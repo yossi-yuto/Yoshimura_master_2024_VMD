@@ -10,10 +10,8 @@ import matplotlib.pyplot as plt
 
 from config import VMD_test_root
 from misc import check_mkdir
-# from networks.TVSD import TVSD
 from networks.VMD_network import VMD_Network
 from dataset.VShadow_crosspairwise import listdirs_only
-import argparse
 from tqdm import tqdm
 from metrics import calc_iou_multi_thresh, get_maxFscore_and_threshold_multi_beta
 from infer_proposed import parse_args
@@ -47,9 +45,7 @@ to_pil = transforms.ToPILImage()
 
 def main():
     net = VMD_Network().cuda()
-
-    # Load checkpoint
-    # checkpoint = "/data2/yoshimura/mirror_detection/proj_mirror_video/checkpoints/best.pth"
+    # pdb.set_trace()
     opt = parse_args()
     checkpoint = os.path.join(opt.result_path, 'best_mae.pth')
     check_point = torch.load(checkpoint)
@@ -98,7 +94,7 @@ def main():
                     pred_1d = res_sigmoid.cpu().numpy().flatten()
                     gt_1d = mask_transform(exemplar_gt).numpy().flatten()
                     # calculate IoU
-                    IoU :dict  = calc_iou_multi_thresh(gt_1d, pred_1d)
+                    IoU :dict  = calc_iou_multi_thresh(gt_1d, pred_1d,  thresholds=[0.3, 0.5, 0.8])
                     metrics_dict['IoU03'].append(IoU[0.3])
                     metrics_dict['IoU05'].append(IoU[0.5])
                     metrics_dict['IoU08'].append(IoU[0.8])
@@ -134,7 +130,9 @@ def main():
             f.write("IoU05 : {}\n".format(np.mean(metrics_dict['IoU05'])))
             f.write("IoU08 : {}\n".format(np.mean(metrics_dict['IoU08'])))
             f.write("MAE : {}\n".format(np.mean(metrics_dict['MAE'])))
-            f.write("MaxmumFbeta : {}\n".format(np.mean(metrics_dict['MaxmumFbeta'])))
+            f.write("MaxFbeta0.3 : {}\n".format(np.mean(metrics_dict['MaxFbeta0.3'])))
+            f.write("MaxFbeta0.5 : {}\n".format(np.mean(metrics_dict['MaxFbeta0.5'])))
+            f.write("MaxFbeta1.0 : {}\n".format(np.mean(metrics_dict['MaxFbeta1.0'])))
 
 def sortImg(img_list):
     img_int_list = [int(f) for f in img_list]
