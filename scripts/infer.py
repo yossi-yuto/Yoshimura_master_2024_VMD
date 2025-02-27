@@ -120,10 +120,6 @@ def main():
                     maxFbeta_map[res_sigmoid > thres] = 1.0
                     maxFbeta_map = F.interpolate(maxFbeta_map[None,None], size=(h, w), mode='bilinear', align_corners=False)
                     Image.fromarray((maxFbeta_map.squeeze().cpu().numpy() * 255).astype(np.uint8)).save(os.path.join(result_dir, video, f"{exemplar_name}_maxFbeta_{score:.3f}.png"))
-
-        with open(os.path.join(result_dir, 'metrics.txt'), 'a') as f:
-            f.write("MAE : {}\n".format(np.mean(metrics_dict['MAE'])))
-            f.write("MaxmumFbeta : {}\n".format(np.mean(metrics_dict['MaxmumFbeta'])))
             
         with open(os.path.join(result_dir, 'metrics.txt'), 'a') as f:
             f.write("IoU03 : {}\n".format(np.mean(metrics_dict['IoU03'])))
