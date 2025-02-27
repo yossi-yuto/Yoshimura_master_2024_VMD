@@ -38,6 +38,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--exp', type=str, default='VMD_network', help='exp name')
 parser.add_argument('--model', type=str, default='VMD_network', help='model name')
 parser.add_argument('--gpu', type=str, default='4,5', help='used gpu id')
+parser.add_argument('--fold', type=int, default=0, help='fold number')
 parser.add_argument('--batchsize', type=int, default=10, help='train batch')
 parser.add_argument('--bestonly', action="store_true", help='only best model')
 
@@ -46,6 +47,7 @@ exp_name = cmd_args.exp
 model_name = cmd_args.model
 gpu_ids = cmd_args.gpu
 train_batch_size = cmd_args.batchsize
+fold_num = cmd_args.fold
 
 VMD_file = importlib.import_module('networks.' + model_name)
 VMD_Network = VMD_file.VMD_Network
@@ -101,14 +103,19 @@ target_transform = transforms.ToTensor()
 to_pil = transforms.ToPILImage()
 
 print('=====>Dataset loading<======')
-training_root = [VMD_training_root] # training_root should be a list form, like [datasetA, datasetB, datasetC], here we use only one dataset.
+VMD_training_root_list = list(VMD_training_root)
+VMD_training_root_list[0] = VMD_training_root_list[0] + '_fold_' + str(fold_num)
+VMD_valid_root_list = list(VMD_valid_root)
+VMD_valid_root_list[0] = VMD_valid_root_list[0] + '_fold_' + str(fold_num)
+training_root = [VMD_training_root_list]
 train_set = CrossPairwiseImg(training_root, joint_transform, img_transform, target_transform)
 train_loader = DataLoader(train_set, batch_size=batch_size,  drop_last=True, num_workers=0, shuffle=True)
-valid_root = [VMD_valid_root]
+valid_root = [VMD_valid_root_list]
 val_set = CrossPairwiseImg(valid_root, val_joint_transform, img_transform, target_transform)
 val_loader = DataLoader(val_set, batch_size=batch_size, num_workers=0, shuffle=False)
 
 print("max epoch:{}".format(args['max_epoch']))
+
 
 ce_loss = nn.CrossEntropyLoss()
 
@@ -200,7 +207,7 @@ def train(net, optimizer, scheduler):
             
             loss_seg = loss_hinge1 + loss_hinge2 + loss_hinge3 + loss_hinge_examplar + loss_hinge_query + loss_hinge_other
             loss = loss_seg
-            pdb.set_trace()
+            
             loss.backward()
 
             torch.nn.utils.clip_grad_norm_(net.parameters(), 12)  # gradient clip
