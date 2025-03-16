@@ -1,6 +1,4 @@
 import pdb
-import os
-import glob
 
 import numpy as np
 from PIL import Image
@@ -12,12 +10,6 @@ from torchvision import transforms
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms.functional as TF
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-
-from multiprocessing import Process, Queue
-import torch.multiprocessing as mp
-
-
 
 
 class PreProcessing():
@@ -26,31 +18,30 @@ class PreProcessing():
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.relative_flow = relative_flow
         
-        # Feature extractor (ResNet50)
+        # ResNet50
         resnet = resnet50(weights="IMAGENET1K_V1").to(self.device)
         resnet.eval()
         self.layer1 = nn.Sequential(
-            *list(resnet.children())[:5]  # Conv1 and Layer1
+            *list(resnet.children())[:5]  
         ).to(self.device)
         self.layer2 = resnet.layer2.to(self.device)
         self.layer3 = resnet.layer3.to(self.device)
         self.layer4 = resnet.layer4.to(self.device)
         
-        # CoTracker model
+        # Tracking
         self.cotracker = torch.hub.load("facebookresearch/co-tracker", "cotracker3_offline").to(self.device)
         self.grid_size = grid_size
         print("grid size:", grid_size)
         
-        # Image transforms
         self.img_transform = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     def tracking(self, frames: torch.Tensor) -> tuple:
+        
         assert len(frames.shape) == 5
         assert frames.max() > 1.0
         B, T, C, H, W = frames.shape
         frames = frames.to(self.device)
         
-        # batch ごとの処理を並列化
         pred_tracks_list = []
         vis_tracks_list = []
         for batch in torch.chunk(frames, B, dim=0):
@@ -78,20 +69,22 @@ class PreProcessing():
     def feature_pyramid_extract(self, frames: torch.Tensor) -> tuple:
         assert len(frames.shape) == 5
         assert frames.shape[1] == 2
-        B, T, C, H, W = frames.shape
         
-        tgt_featmaps = self.extract_featmaps(frames[:, 0, :, :, :])
-        supp_featmaps = self.extract_featmaps(frames[:, 1, :, :, :])
+        tgt_frame = frames[:, 0, :, :, :]
+        supp_frame = frames[:, 1, :, :, :]
         
-        pred_tracks, vis_tracks = self.tracking(frames)
-        # 角度計算
+        tgt_featmaps = self.extract_featmaps(tgt_frame)
+        supp_featmaps = self.extract_featmaps(supp_frame)
+        
+        pred_tracks, _ = self.tracking(frames)
+        
         delta_x = pred_tracks[:, 1, :, :, 0] - pred_tracks[:, 0, :, :, 0]
         delta_y = pred_tracks[:, 1, :, :, 1] - pred_tracks[:, 0, :, :, 1]
         opflow_angle = torch.atan2(delta_y, delta_x)
         if self.relative_flow:
             opflow_angle = opflow_angle - torch.mean(opflow_angle, dim=(1,2),keepdim=True)
             
-        opflow_angle = torch.sin(opflow_angle) # 正規化
+        opflow_angle = torch.sin(opflow_angle) 
         opflow_magnitude = torch.sqrt(delta_x**2 + delta_y**2)
         opflow_magnitude = (opflow_magnitude - opflow_magnitude.mean()) / opflow_magnitude.std() #　正規化
         
