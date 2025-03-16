@@ -1,21 +1,18 @@
 # 吉村（修論）の引き継ぎコード
 VMDデータセットにおけるVMDNetと提案法の比較実験のためのコード．
 
-## PythonとPytorchのバージョン
+## Requirement
 - Python 3.12.3
 - pytorch 2.5.0
 
-
-
-## VMDデータセット
+## VMD dataset
 Linら[1]が作成したVMD データセットは，洗面台や家具などの平面鏡を動画撮影したデータセットで，フレームごとに
 鏡面領域の正解マスク画像が付与されている．データセットの内容は，
 学習用（```train_origin```）に143 本（7,835 フレーム），テスト用（```test```）に126 本
 （7,152）が用意されている．[Google Drive link](https://drive.google.com/drive/folders/1ECfkY8RyAyjYu9lTm7vvvU6ZE2Tg2Ush?usp=drive_link)
 
 
-
-## データ構造
+## Data structure
 - Google driveにアップロードされたzipファイル（```train_origin.zip```,```test.zip```）を```./VMD```ダウンロードし全て展開する
 - 学習データ```train_origin```をモデルの学習用と検証用に5foldに分割するために，```VMD/split_train_val_fold.py```を実行する．
 
@@ -66,14 +63,14 @@ $ git clone https://github.com/yossi-yuto/Yoshimura_master_2024_VMD.git
 $ pip install -r requirements.txt
 ```
 
-## 実行方法
+## How to run
 提案法のモデルを5foldの交差検証で実施する場合，以下のように実行．
 ```bash 
 $ source pipeline_proposed_fols.sh {GPU_NUM} {date}
 ```
 `{GPU_NUM}`はGPUのデバイスを指定し，`{date}`は実行日時を記載．
 
-### 実行例
+### Example
 GPUデバイスの０番を使用し、2025年2月10日に実行する場合、以下のコマンドを実行.
 
 ```bash
@@ -90,7 +87,7 @@ $ source pipeline_spherical.sh 0 20250210
 ```
 
 
-### 参照文献
+### Reference
 
 [1]Jiaying Lin, Xin Tan, Rynson W.H. Lau, "Learning To Detect Mirrors From Videos via Dual Correspondences," Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pp. 9109–9118, June 2023.[page](https://cvpr.thecvf.com/virtual/2023/poster/21597)
 ```markdown
