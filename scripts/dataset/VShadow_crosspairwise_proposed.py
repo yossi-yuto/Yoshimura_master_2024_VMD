@@ -23,47 +23,43 @@ class CrossPairwiseImg(data.Dataset):
         self.label_ext = '.png'
         self.num_video_frame = 0
         self.videoImg_list = self.generateImgFromVideo(self.video_root) # list of (img_path, gt_path, videoStartIndex, videoLength)
+        
         print('Total video frames is {}.'.format(self.num_video_frame))
         if len(self.img_root) > 0:
             self.singleImg_list = self.generateImgFromSingle(self.img_root)
             print('Total single image frames is {}.'.format(len(self.singleImg_list)))
 
     def __getitem__(self, index):
-        manual_random = random.random()
+        # 検出対象の画像を取得（連続するフレームID）
         exemplar_path, exemplar_gt_path, videoStartIndex, videoLength = self.videoImg_list[index]
-        # query_index = np.random.randint(videoStartIndex, videoStartIndex + videoLength) # other indexの確保
+        
+        # 検出対象の画像における動画データの情報を取得
         frame_index_list = np.arange(videoStartIndex, videoStartIndex + videoLength) 
-        relative_dis_index = frame_index_list - index
         
-        if -5 in relative_dis_index:
-            query_index = index - 5
-        elif 5 in relative_dis_index:
-            query_index = index + 5
+        # 次のフレームが存在しない場合は、前のフレームを参照
+        if index == frame_index_list[-1]:
+            query_index = index - 1
         else:
-            max_relative_index = max(relative_dis_index, key=abs)
-            query_index = index + max_relative_index
-            
-        # pdb.set_trace()
+            query_index = index + 1
+        query_path, query_gt_path, _, _ = self.videoImg_list[query_index]
         
-        if query_index == index:
-            query_index = np.random.randint(videoStartIndex, videoStartIndex + videoLength)
-            
-        other_index = index + 1
-        if other_index >= videoStartIndex + videoLength - 1:
-            other_index = videoStartIndex
-        query_index, other_index = other_index, query_index
-        # pdb.set_trace()
-        query_path, query_gt_path, videoStartIndex2, videoLength2 = self.videoImg_list[query_index]
-        if videoStartIndex != videoStartIndex2 or videoLength != videoLength2:
-            raise TypeError('Something wrong')
-        # pdb.set_trace()
-        other_path, other_gt_path, videoStartIndex3, videoLength3 = self.videoImg_list[other_index]
-        if videoStartIndex != videoStartIndex3:
-            raise TypeError('Something wrong')
-        # exemplar: t, query: t+1, other: random sample
-        # if len(self.img_root) > 0:
-        #     single_idx = np.random.randint(0, videoLength)
-        #     single_image_path, single_gt_path = self.singleImg_list[single_idx]
+        # 検出対象フレームIDと動画内の各フレームIDの距離を計算
+        relative_dis_index = frame_index_list - index 
+        
+        """ 最も離れたフレームを取得 """
+        relative_max_far_index = max(relative_dis_index, key=abs)
+        other_index = index + relative_max_far_index
+        
+        """ 5フレーム間を設定 """
+        # if -5 in relative_dis_index:
+        #     query_index = index - 5
+        # elif 5 in relative_dis_index:
+        #     query_index = index + 5
+        # else:
+        #     max_relative_index = max(relative_dis_index, key=abs)
+        #     query_index = index + max_relative_index
+        
+        other_path, other_gt_path, _, _ = self.videoImg_list[other_index]
 
         exemplar = Image.open(exemplar_path).convert('RGB')
         query = Image.open(query_path).convert('RGB')
@@ -71,22 +67,19 @@ class CrossPairwiseImg(data.Dataset):
         exemplar_gt = Image.open(exemplar_gt_path).convert('L')
         query_gt = Image.open(query_gt_path).convert('L')
         other_gt = Image.open(other_gt_path).convert('L')
-        # if len(self.img_root) > 0:
-        #     single_image = Image.open(single_image_path).convert('RGB')
-        #     single_gt = Image.open(single_gt_path).convert('L')
 
         # データ拡張
+        manual_random = random.random()
         if self.joint_transform is not None:
             exemplar, exemplar_gt = self.joint_transform(exemplar, exemplar_gt, manual_random)
             query, query_gt = self.joint_transform(query, query_gt, manual_random)
             other, other_gt = self.joint_transform(other, other_gt)
             if len(self.img_root) > 0:
                 single_image, single_gt = self.joint_transform(single_image, single_gt)
-            
             exemplar_frame = self.target_transform(exemplar) * 255.0
-            query_frame = self.target_transform(query) * 255.0
-            frames = torch.stack([exemplar_frame, query_frame], dim=0) # (2, C, H, W)
-        #　通常の変換
+            other_frame = self.target_transform(other) * 255.0
+            frames = torch.stack([exemplar_frame, other_frame], dim=0) # (2, C, H, W)
+        # 通常の変換
         if self.img_transform is not None:
             exemplar = self.img_transform(exemplar)
             query = self.img_transform(query)
