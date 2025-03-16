@@ -14,12 +14,8 @@ import joint_transforms
 from config import VMD_training_root, VMD_valid_root
 from dataset.VShadow_crosspairwise_proposed import CrossPairwiseImg
 from misc import AvgMeter, check_mkdir
-# from networks.TVSD import TVSD
-# from networks.VMD_network import VMD_Network
-from torch.optim.lr_scheduler import StepLR
 import math
 from losses import lovasz_hinge, binary_xloss
-import random
 import torch.nn.functional as F
 import numpy as np
 import time
@@ -33,7 +29,6 @@ cudnn.deterministic = True
 cudnn.benchmark = False
 
 ckpt_path = './experiment_results'
-# exp_name = 'VMD'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp', type=str, default='proposed_network', help='exp name')
@@ -50,7 +45,6 @@ gpu_ids = cmd_args.gpu
 train_batch_size = cmd_args.batchsize
 fold_num = cmd_args.fold
 
-# model_nameをファイル名にしておく、ネットワーク名はVMD_Networkに統一により、異なるモデルの実験でも可能
 VMD_file = importlib.import_module('networks.' + model_name)
 VMD_Network = VMD_file.VMD_Network
 
@@ -89,8 +83,8 @@ if len(gpu_ids.split(',')) > 1:
 else:
     torch.cuda.set_device(0)
     batch_size = train_batch_size
-    
-# 前処理用
+
+# 前処理用コード
 preprocess = PreProcessing(grid_size=52, relative_flow=True)
 
 joint_transform = joint_transforms.Compose([
@@ -152,7 +146,6 @@ def main():
     # single-GPU training
     else:
         net = VMD_Network().cuda().train()
-        # net = net.apply(freeze_bn) # freeze BN
         params = [
             {"params": [param for name, param in net.named_parameters() if 'backbone' in name], "lr": args['finetune_lr']},
             {"params": [param for name, param in net.named_parameters() if 'backbone' not in name], "lr": args['scratch_lr']},
@@ -164,14 +157,6 @@ def main():
             # {"params": net.final_pre.parameters(), "lr": args['scratch_lr']}
         ]
 
-    # parameters loading
-    # pretrained_filepath = os.path.join('../checkpoints', 'best.pth')
-    #### 削除予定
-    pretrained_filepath = "/data2/yoshimura/mirror_detection/proj_mirror_video/scripts/experiment_results/20250215/best_mae.pth"
-    if not os.path.exists(pretrained_filepath):
-        raise ValueError('pretrained file is not found')
-    net.load_state_dict(torch.load(pretrained_filepath)['model'], strict=False)
-    # backbone prameters freeze
     for name, param in net.named_parameters():
         if 'backbone' in name:
             param.requires_grad = False
@@ -202,7 +187,7 @@ def train(net, optimizer, scheduler):
         start_time = time.time()
         for i, sample in enumerate(train_iterator):
             exemplar, exemplar_gt, query, query_gt = sample['exemplar'].cuda(), sample['exemplar_gt'].cuda(), sample['query'].cuda(), sample['query_gt'].cuda()
-            other, other_gt = sample['other'].cuda(), sample['other_gt'].cuda()   # exemplar: t, query: t+1, other: ramdom frame
+            other, other_gt = sample['other'].cuda(), sample['other_gt'].cuda()   
             
             output = preprocess.feature_pyramid_extract(sample['frames'].cuda())
 
@@ -225,8 +210,8 @@ def train(net, optimizer, scheduler):
 
             loss.backward()
 
-            torch.nn.utils.clip_grad_norm_(net.parameters(), 12)  # gradient clip
-            optimizer.step()  # change gradient
+            torch.nn.utils.clip_grad_norm_(net.parameters(), 12)  
+            optimizer.step()  
 
             loss_record1.update(loss_hinge_examplar.item(), batch_size)
             loss_record2.update(loss_hinge_query.item(), batch_size)
@@ -247,7 +232,6 @@ def train(net, optimizer, scheduler):
                 start = time.perf_counter()
                 log_time = log + ' [time {}]'.format(elapsed)
                 print(log_time)
-                # train_iterator.set_description(log_time)
             open(log_path, 'a').write(log + '\n')
 
         if curr_epoch % 1 == 0 and not cmd_args.bestonly:
@@ -261,7 +245,7 @@ def train(net, optimizer, scheduler):
 
         print('1 epoch time: %f' % (time.time() - start_time))
 
-        net.train() # val -> train
+        net.train() 
         if current_mae < best_mae:
             best_mae = current_mae
             checkpoint = {
@@ -271,11 +255,11 @@ def train(net, optimizer, scheduler):
             torch.save(checkpoint, os.path.join(ckpt_path, exp_name, 'best_mae.pth'))
 
         if curr_epoch > args['max_epoch']:
-            # torch.save(net.state_dict(), os.path.join(ckpt_path, exp_name, '%d.pth' % curr_iter))
+            torch.save(net.state_dict(), os.path.join(ckpt_path, exp_name, '%d.pth' % curr_iter))
             return
         curr_epoch += 1
-        scheduler.step()  # change learning rate after epoch
-
+        scheduler.step()  
+        
 def val(net, epoch):
     mae_record = AvgMeter()
     net.eval()
