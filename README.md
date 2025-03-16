@@ -8,16 +8,16 @@ VMDデータセットにおけるVMDNetと提案法の比較実験のための�
 
 
 ## VMDデータセット
-VMD データセットは，洗面台や家具などの平面鏡を動画撮影したデータセットで，フレームごとに
-鏡面領域の正解マスク画像が付与されている．学習用に143 本（7,835 フレーム），テスト用に126 本
-（7,152）が用意されている．
-- [Google Drive](https://drive.google.com/drive/folders/1ECfkY8RyAyjYu9lTm7vvvU6ZE2Tg2Ush?usp=drive_link)
+Linら[1]が作成したVMD データセットは，洗面台や家具などの平面鏡を動画撮影したデータセットで，フレームごとに
+鏡面領域の正解マスク画像が付与されている．データセットの内容は，
+学習用（```train_origin```）に143 本（7,835 フレーム），テスト用（```test```）に126 本
+（7,152）が用意されている．[Google Drive link](https://drive.google.com/drive/folders/1ECfkY8RyAyjYu9lTm7vvvU6ZE2Tg2Ush?usp=drive_link)
 
-また，学習データセット```train_origin```のうち5foldのデータセットの分割をする際には、```VMD/split_train_val_fold.py```を実行
+
 
 ## データ構造
-- Google driveにアップロードされたzipファイル（```train_origin.zip```,```test.zip```）を```./VMD```ダウンロードし展開
-- 
+- Google driveにアップロードされたzipファイル（```train_origin.zip```,```test.zip```）を```./VMD```ダウンロードし全て展開する
+- 学習データ```train_origin```をモデルの学習用と検証用に5foldに分割するために，```VMD/split_train_val_fold.py```を実行する．
 
 ```
 ./VMD
@@ -90,3 +90,16 @@ $ source pipeline_spherical.sh 0 20250210
 ```
 
 
+### 参照文献
+
+[1]Jiaying Lin, Xin Tan, Rynson W.H. Lau, "Learning To Detect Mirrors From Videos via Dual Correspondences," Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pp. 9109–9118, June 2023.[page](https://cvpr.thecvf.com/virtual/2023/poster/21597)
+```markdown
+@InProceedings{Lin_2023_CVPR,
+      author    = {Lin, Jiaying and Tan, Xin and Lau, Rynson W.H.},
+      title     = {Learning To Detect Mirrors From Videos via Dual Correspondences},
+      booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+      month     = {June},
+      year      = {2023},
+      pages     = {9109-9118}
+  }
+```
