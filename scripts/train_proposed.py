@@ -103,9 +103,9 @@ to_pil = transforms.ToPILImage()
 
 print('=====>Dataset loading<======')
 VMD_training_root_list = list(VMD_training_root)
-VMD_training_root_list[0] = VMD_training_root_list[0] 
+VMD_training_root_list[0] = VMD_training_root_list[0] + '_fold_' + str(fold_num)
 VMD_valid_root_list = list(VMD_valid_root)
-VMD_valid_root_list[0] = VMD_valid_root_list[0] 
+VMD_valid_root_list[0] = VMD_valid_root_list[0] + '_fold_' + str(fold_num)
 training_root = [VMD_training_root_list]
 train_set = CrossPairwiseImg(training_root, joint_transform, img_transform, target_transform)
 train_loader = DataLoader(train_set, batch_size=batch_size,  drop_last=True, num_workers=0, shuffle=True)

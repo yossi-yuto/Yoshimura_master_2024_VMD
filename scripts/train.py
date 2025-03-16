@@ -38,7 +38,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--exp', type=str, default='VMD_network', help='exp name')
 parser.add_argument('--model', type=str, default='VMD_network', help='model name')
 parser.add_argument('--gpu', type=str, default='4,5', help='used gpu id')
-parser.add_argument('--fold', type=int, default=0, help='fold number')
+parser.add_argument('--fold', type=int, default=None, help='fold number')
 parser.add_argument('--batchsize', type=int, default=10, help='train batch')
 parser.add_argument('--bestonly', action="store_true", help='only best model')
 
