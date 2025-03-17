@@ -53,7 +53,7 @@ Linら[1]が作成したVMD データセットは，洗面台や家具などの�
 ```
 
 ## Installation
-実験は以下の手順により再現
+実験環境を、以下の手順に沿って構築
 1. リポジトリーのclone
 ```bash
 $ git clone https://github.com/yossi-yuto/Yoshimura_master_2024_VMD.git
@@ -61,6 +61,10 @@ $ git clone https://github.com/yossi-yuto/Yoshimura_master_2024_VMD.git
 2.  ```requirements.txt``` に記載されたパーケージのインストール
 ```bash
 $ pip install -r requirements.txt
+```
+3. ```./scripts```ディレクトリに移動
+```bash
+cd scripts
 ```
 
 ## How to run
