@@ -70,7 +70,7 @@ cd scripts
 ## How to run
 提案法のモデルを5foldの交差検証で実施する場合，以下のように実行．
 ```bash 
-/scripts$ source pipeline_proposed_fols.sh {GPU_NUM} {date}
+/scripts$ source pipeline_proposed_fold.sh {GPU_NUM} {date}
 ```
 `{GPU_NUM}`はGPUのデバイスを指定し，`{date}`は実行日時を記載．
 
