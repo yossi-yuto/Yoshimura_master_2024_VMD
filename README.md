@@ -89,14 +89,5 @@ $ source pipeline_spherical.sh 0 20250210
 
 ### Reference
 
-[1]Jiaying Lin, Xin Tan, Rynson W.H. Lau, "Learning To Detect Mirrors From Videos via Dual Correspondences," Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pp. 9109–9118, June 2023.[page](https://cvpr.thecvf.com/virtual/2023/poster/21597)
-```markdown
-@InProceedings{Lin_2023_CVPR,
-      author    = {Lin, Jiaying and Tan, Xin and Lau, Rynson W.H.},
-      title     = {Learning To Detect Mirrors From Videos via Dual Correspondences},
-      booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
-      month     = {June},
-      year      = {2023},
-      pages     = {9109-9118}
-  }
-```
+[1]Jiaying Lin, Xin Tan, Rynson W.H. Lau, "Learning To Detect Mirrors From Videos via Dual Correspondences," Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), pp. 9109–9118, June 2023. [project page](https://cvpr.thecvf.com/virtual/2023/poster/21597)
+
