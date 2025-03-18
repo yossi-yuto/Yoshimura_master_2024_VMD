@@ -9,7 +9,7 @@ VMDデータセットにおけるVMDNetと提案法の比較実験のための�
 Linら[1]が作成したVMD データセットは，洗面台や家具などの平面鏡を動画撮影したデータセットで，フレームごとに
 鏡面領域の正解マスク画像が付与されている．データセットの内容は，
 学習用（```train_origin```）に143 本（7,835 フレーム），テスト用（```test```）に126 本
-（7,152）が用意されている．[Google Drive link](https://drive.google.com/drive/folders/1ECfkY8RyAyjYu9lTm7vvvU6ZE2Tg2Ush?usp=drive_link)
+（7,152）が用意されている．[Google Drive link](https://drive.google.com/drive/folders/1aMiu2enKbSN1WJSjzbLGo1uoOHnbIaKY?usp=sharing)
 
 上記のGoogle Driveから事前学習パラメータ```resnext_101_32x4d.pth```をダウンロードし，```checkpoints```ディレクトリに保存
 
