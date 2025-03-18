@@ -78,7 +78,7 @@ cd scripts
 GPUデバイスの０番を使用し、2025年2月10日に実行する場合、以下のコマンドを実行.
 
 ```bash
-/scripts$ source pipeline_spherical.sh 0 20250210
+/scripts$ source pipeline_proposed_fold.sh 0 20250210
 ```
 なお、実験結果は```./scripts/experiment_results```に以下のように5fold分が作成される
 ```
