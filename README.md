@@ -11,6 +11,8 @@ Linら[1]が作成したVMD データセットは，洗面台や家具などの�
 学習用（```train_origin```）に143 本（7,835 フレーム），テスト用（```test```）に126 本
 （7,152）が用意されている．[Google Drive link](https://drive.google.com/drive/folders/1ECfkY8RyAyjYu9lTm7vvvU6ZE2Tg2Ush?usp=drive_link)
 
+上記のGoogle Driveから事前学習パラメータ```resnext_101_32x4d.pth```をダウンロードし，```checkpoints```ディレクトリに保存
+
 
 ## Data structure
 - Google driveにアップロードされたzipファイル（```train_origin.zip```,```test.zip```）を```./VMD```ダウンロードし全て展開する
@@ -66,6 +68,7 @@ $ pip install -r requirements.txt
 ```bash
 cd scripts
 ```
+
 
 ## How to run
 提案法のモデルを5foldの交差検証で実施する場合，以下のように実行．
